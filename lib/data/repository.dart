@@ -7,8 +7,30 @@ import 'database.dart';
 /// Setting keys.
 abstract final class SettingKeys {
   static const lastPricePerLitre = 'lastPricePerLitre';
+  static const lastFuelGrade = 'lastFuelGrade';
   static const onboardingDone = 'onboardingDone';
   static const seeded = 'seeded';
+
+  // Reminders. Dates are stored as yyyy-mm-dd.
+  static const serviceEveryKm = 'serviceEveryKm';
+  static const serviceEveryDays = 'serviceEveryDays';
+  static const insuranceExpiry = 'insuranceExpiry';
+  static const pucExpiry = 'pucExpiry';
+
+  // Automatic backup.
+  static const backupFolderUri = 'backupFolderUri';
+  static const backupFolderName = 'backupFolderName';
+  static const lastBackupAt = 'lastBackupAt';
+  static const lastBackupError = 'lastBackupError';
+
+  /// Settings that belong to this phone (a folder permission is only valid
+  /// on the device that granted it), so they never go into backup files.
+  static const deviceOnly = {
+    backupFolderUri,
+    backupFolderName,
+    lastBackupAt,
+    lastBackupError,
+  };
 }
 
 /// Everything stored, as engine types. Entry ids are database ids as strings.
@@ -122,6 +144,9 @@ class MileageRepository {
         AppSettingsCompanion.insert(key: key, value: value),
       );
 
+  Future<void> removeSetting(String key) =>
+      (db.delete(db.appSettings)..where((s) => s.key.equals(key))).go();
+
   /// Replaces everything with [backup], keeping its entry ids so decisions
   /// still point at the right anchors. All or nothing.
   Future<void> replaceAll(Backup backup) => db.transaction(() async {
@@ -195,9 +220,18 @@ LogEntry _entryFromRow(LogRow row) => switch (row.kind) {
     gaugeBars: row.gaugeBars,
     isFull: row.isFull,
     isAnchor: row.isAnchor,
+    grade: _grade(row.fuelGrade),
     note: row.note,
   ),
 };
+
+/// Unknown names (say, from a newer app version) read as "not recorded".
+FuelGrade? _grade(String? name) {
+  for (final grade in FuelGrade.values) {
+    if (grade.name == name) return grade;
+  }
+  return null;
+}
 
 /// Every column except id and position.
 LogEntriesCompanion _entryCompanion(LogEntry entry) => switch (entry) {
@@ -210,6 +244,7 @@ LogEntriesCompanion _entryCompanion(LogEntry entry) => switch (entry) {
     gaugeBars: Value(entry.gaugeBars),
     isFull: Value(entry.isFull),
     isAnchor: Value(entry.isAnchor),
+    fuelGrade: Value(entry.grade?.name),
     note: Value(entry.note),
   ),
   ServiceEvent() => LogEntriesCompanion(
@@ -221,6 +256,7 @@ LogEntriesCompanion _entryCompanion(LogEntry entry) => switch (entry) {
     gaugeBars: const Value(null),
     isFull: const Value(false),
     isAnchor: const Value(false),
+    fuelGrade: const Value(null),
     note: Value(entry.note),
   ),
 };

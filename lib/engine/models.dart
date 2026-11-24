@@ -110,6 +110,7 @@ final class RefuelEntry extends LogEntry {
     this.gaugeBars,
     this.isFull = false,
     this.isAnchor = false,
+    this.grade,
     this.note = '',
   }) {
     final odo = odometer;
@@ -149,11 +150,27 @@ final class RefuelEntry extends LogEntry {
   /// This refuel is a chain anchor.
   final bool isAnchor;
 
+  /// What kind of petrol it was, if recorded. Only used for comparisons.
+  final FuelGrade? grade;
+
   /// Free text for the owner. The engine ignores it.
   final String note;
 
   /// Litres added: amount ÷ price per litre.
   double get litres => amount / pricePerLitre;
+}
+
+/// The kind of petrol in a refuel. Recording it lets the owner compare
+/// mileage by fuel with evidence instead of anecdotes.
+enum FuelGrade {
+  /// Regular petrol (E20 at most Indian pumps since 2025).
+  regular,
+
+  /// Premium / high-octane (XP95, Power, Speed, V-Power, ...).
+  premium,
+
+  /// Ethanol-free or E10, where a pump sells it.
+  lowEthanol,
 }
 
 /// A service visit. It ends any open chain without a result and starts a new
@@ -176,7 +193,7 @@ final class ServiceEvent extends LogEntry {
 
 /// The user's answer for a closed chain.
 enum ChainDecisionKind {
-  /// "Bike may need service": count it even though it is out of range.
+  /// "Bike may need attention": count it even though it is out of range.
   accept,
 
   /// "Discard chain": never count it.

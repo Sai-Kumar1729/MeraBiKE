@@ -29,7 +29,9 @@ class OnboardingScreen extends StatelessWidget {
               const SizedBox(height: 8),
               const Text(
                 'Real mileage from the ₹100–₹500 fills you already do. No '
-                'full-tank tests.',
+                'full tanks, no running dry, and an honest range instead of a '
+                'made-up number. No account, no ads; everything stays on '
+                'your phone.',
               ),
               const SizedBox(height: 24),
             ],

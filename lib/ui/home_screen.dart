@@ -5,26 +5,36 @@ import '../engine/engine.dart';
 import 'format.dart';
 import 'missed_refuel_screen.dart';
 import 'service_form_screen.dart';
+import 'share_card.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, required this.onOpenHistory});
+  const HomeScreen({
+    super.key,
+    required this.onOpenHistory,
+    required this.onOpenBike,
+  });
 
   final VoidCallback onOpenHistory;
+  final VoidCallback onOpenBike;
 
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final analysis = state.analysis!;
     final bike = state.bike!;
+    final scheme = Theme.of(context).colorScheme;
     final flagged = analysis.chains
         .where((c) => c.status == ChainStatus.flagged)
         .length;
+    final due = state.reminders
+        .where((r) => r.state != DueState.ok || r.needsLastService)
+        .toList();
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
       children: [
         if (flagged > 0)
           Card(
-            color: Theme.of(context).colorScheme.errorContainer,
+            color: scheme.errorContainer,
             child: ListTile(
               leading: const Icon(Icons.flag),
               title: Text(
@@ -36,7 +46,52 @@ class HomeScreen extends StatelessWidget {
               onTap: onOpenHistory,
             ),
           ),
-        _EstimateCard(analysis: analysis, bike: bike),
+        if (state.lastBackupError case final error?)
+          Card(
+            color: scheme.errorContainer,
+            child: ListTile(
+              leading: const Icon(Icons.cloud_off),
+              title: const Text('Backup failed'),
+              subtitle: Text(error),
+              trailing: TextButton(
+                onPressed: state.chooseBackupFolder,
+                child: const Text('Pick folder'),
+              ),
+            ),
+          )
+        else if (!state.autoBackupOn)
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.backup_outlined),
+              title: const Text('Your data lives only on this phone'),
+              subtitle: const Text(
+                'Pick a folder once; MeraBiKE saves a backup there after '
+                'every change.',
+              ),
+              trailing: TextButton(
+                onPressed: state.chooseBackupFolder,
+                child: const Text('Turn on'),
+              ),
+            ),
+          ),
+        for (final reminder in due)
+          Card(
+            color: reminder.state == DueState.overdue
+                ? scheme.errorContainer
+                : null,
+            child: ListTile(
+              leading: Icon(
+                reminder.state == DueState.overdue
+                    ? Icons.warning_amber
+                    : Icons.event,
+              ),
+              title: Text(reminderTitle(reminder.kind)),
+              subtitle: Text(reminderDetail(context, reminder)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: onOpenBike,
+            ),
+          ),
+        _EstimateCard(analysis: analysis, bike: bike, cost: state.rupeesPerKm),
         _OpenChainCard(chain: analysis.openChain),
         _KmLeftCard(estimate: estimateKmLeft(analysis, bike), bike: bike),
         const SizedBox(height: 8),
@@ -72,23 +127,44 @@ class HomeScreen extends StatelessWidget {
 }
 
 class _EstimateCard extends StatelessWidget {
-  const _EstimateCard({required this.analysis, required this.bike});
+  const _EstimateCard({
+    required this.analysis,
+    required this.bike,
+    required this.cost,
+  });
 
   final LogAnalysis analysis;
   final Bike bike;
+  final CostPerKm? cost;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final current = analysis.current;
     final sinceService = analysis.periods.last.startedBy != null;
+    final cost = this.cost;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Your mileage', style: theme.textTheme.titleMedium),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Your mileage',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                if (current != null)
+                  IconButton(
+                    tooltip: 'Share your mileage',
+                    icon: const Icon(Icons.share),
+                    onPressed: () => showShareCard(context),
+                  ),
+              ],
+            ),
             const SizedBox(height: 8),
             if (current == null) ...[
               Text('No result yet', style: theme.textTheme.headlineMedium),
@@ -111,6 +187,13 @@ class _EstimateCard extends StatelessWidget {
                 'chain${current.chains.length == 1 ? '' : 's'}'
                 '${sinceService ? ', since your last service' : ''}).',
               ),
+              if (cost != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '${costPerKmText(cost)} at ${rupees(cost.pricePerLitre)}/L',
+                  style: theme.textTheme.titleSmall,
+                ),
+              ],
             ],
           ],
         ),

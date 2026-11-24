@@ -23,12 +23,17 @@ class _MissedRefuelScreenState extends State<MissedRefuelScreen> {
   final _price = TextEditingController();
   String? _chainId;
   DateTime? _date;
+  FuelGrade? _grade;
+  bool _initialized = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_chainId != null) return;
-    final chains = AppScope.of(context).analysis?.chains ?? const [];
+    if (_initialized) return;
+    _initialized = true;
+    final state = AppScope.read(context);
+    _grade = state.lastFuelGrade;
+    final chains = state.analysis?.chains ?? const [];
     final chain =
         chains.where((c) => c.id == widget.chainId).firstOrNull ??
         chainForDate(chains, DateTime.now());
@@ -119,6 +124,11 @@ class _MissedRefuelScreenState extends State<MissedRefuelScreen> {
                     controller: _price,
                     onChanged: () => setState(() {}),
                   ),
+                  const SizedBox(height: 16),
+                  FuelGradeField(
+                    value: _grade,
+                    onChanged: (grade) => setState(() => _grade = grade),
+                  ),
                   const SizedBox(height: 24),
                   FilledButton.icon(
                     onPressed: () => _save(chain),
@@ -149,9 +159,10 @@ class _MissedRefuelScreenState extends State<MissedRefuelScreen> {
       date: DateTime(_date!.year, _date!.month, _date!.day, 12),
       amount: parseDecimal(_amount.text)!,
       pricePerLitre: parseDecimal(_price.text)!,
+      grade: _grade,
       note: 'Added later as a missed refuel',
     );
-    await AppScope.of(context).addMissedRefuel(chain, entry);
+    await AppScope.read(context).addMissedRefuel(chain, entry);
     if (mounted) Navigator.pop(context);
   }
 }

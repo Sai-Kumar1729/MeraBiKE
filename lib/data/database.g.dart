@@ -719,6 +719,17 @@ class $LogEntriesTable extends LogEntries
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _fuelGradeMeta = const VerificationMeta(
+    'fuelGrade',
+  );
+  @override
+  late final GeneratedColumn<String> fuelGrade = GeneratedColumn<String>(
+    'fuel_grade',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -732,6 +743,7 @@ class $LogEntriesTable extends LogEntries
     isFull,
     isAnchor,
     note,
+    fuelGrade,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -817,6 +829,12 @@ class $LogEntriesTable extends LogEntries
         note.isAcceptableOrUnknown(data['note']!, _noteMeta),
       );
     }
+    if (data.containsKey('fuel_grade')) {
+      context.handle(
+        _fuelGradeMeta,
+        fuelGrade.isAcceptableOrUnknown(data['fuel_grade']!, _fuelGradeMeta),
+      );
+    }
     return context;
   }
 
@@ -870,6 +888,10 @@ class $LogEntriesTable extends LogEntries
         DriftSqlType.string,
         data['${effectivePrefix}note'],
       )!,
+      fuelGrade: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fuel_grade'],
+      ),
     );
   }
 
@@ -895,6 +917,9 @@ class LogRow extends DataClass implements Insertable<LogRow> {
   final bool isFull;
   final bool isAnchor;
   final String note;
+
+  /// A `FuelGrade` name, or null when not recorded. Added in schema 2.
+  final String? fuelGrade;
   const LogRow({
     required this.id,
     required this.position,
@@ -907,6 +932,7 @@ class LogRow extends DataClass implements Insertable<LogRow> {
     required this.isFull,
     required this.isAnchor,
     required this.note,
+    this.fuelGrade,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -930,6 +956,9 @@ class LogRow extends DataClass implements Insertable<LogRow> {
     map['is_full'] = Variable<bool>(isFull);
     map['is_anchor'] = Variable<bool>(isAnchor);
     map['note'] = Variable<String>(note);
+    if (!nullToAbsent || fuelGrade != null) {
+      map['fuel_grade'] = Variable<String>(fuelGrade);
+    }
     return map;
   }
 
@@ -954,6 +983,9 @@ class LogRow extends DataClass implements Insertable<LogRow> {
       isFull: Value(isFull),
       isAnchor: Value(isAnchor),
       note: Value(note),
+      fuelGrade: fuelGrade == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fuelGrade),
     );
   }
 
@@ -974,6 +1006,7 @@ class LogRow extends DataClass implements Insertable<LogRow> {
       isFull: serializer.fromJson<bool>(json['isFull']),
       isAnchor: serializer.fromJson<bool>(json['isAnchor']),
       note: serializer.fromJson<String>(json['note']),
+      fuelGrade: serializer.fromJson<String?>(json['fuelGrade']),
     );
   }
   @override
@@ -991,6 +1024,7 @@ class LogRow extends DataClass implements Insertable<LogRow> {
       'isFull': serializer.toJson<bool>(isFull),
       'isAnchor': serializer.toJson<bool>(isAnchor),
       'note': serializer.toJson<String>(note),
+      'fuelGrade': serializer.toJson<String?>(fuelGrade),
     };
   }
 
@@ -1006,6 +1040,7 @@ class LogRow extends DataClass implements Insertable<LogRow> {
     bool? isFull,
     bool? isAnchor,
     String? note,
+    Value<String?> fuelGrade = const Value.absent(),
   }) => LogRow(
     id: id ?? this.id,
     position: position ?? this.position,
@@ -1020,6 +1055,7 @@ class LogRow extends DataClass implements Insertable<LogRow> {
     isFull: isFull ?? this.isFull,
     isAnchor: isAnchor ?? this.isAnchor,
     note: note ?? this.note,
+    fuelGrade: fuelGrade.present ? fuelGrade.value : this.fuelGrade,
   );
   LogRow copyWithCompanion(LogEntriesCompanion data) {
     return LogRow(
@@ -1036,6 +1072,7 @@ class LogRow extends DataClass implements Insertable<LogRow> {
       isFull: data.isFull.present ? data.isFull.value : this.isFull,
       isAnchor: data.isAnchor.present ? data.isAnchor.value : this.isAnchor,
       note: data.note.present ? data.note.value : this.note,
+      fuelGrade: data.fuelGrade.present ? data.fuelGrade.value : this.fuelGrade,
     );
   }
 
@@ -1052,7 +1089,8 @@ class LogRow extends DataClass implements Insertable<LogRow> {
           ..write('gaugeBars: $gaugeBars, ')
           ..write('isFull: $isFull, ')
           ..write('isAnchor: $isAnchor, ')
-          ..write('note: $note')
+          ..write('note: $note, ')
+          ..write('fuelGrade: $fuelGrade')
           ..write(')'))
         .toString();
   }
@@ -1070,6 +1108,7 @@ class LogRow extends DataClass implements Insertable<LogRow> {
     isFull,
     isAnchor,
     note,
+    fuelGrade,
   );
   @override
   bool operator ==(Object other) =>
@@ -1085,7 +1124,8 @@ class LogRow extends DataClass implements Insertable<LogRow> {
           other.gaugeBars == this.gaugeBars &&
           other.isFull == this.isFull &&
           other.isAnchor == this.isAnchor &&
-          other.note == this.note);
+          other.note == this.note &&
+          other.fuelGrade == this.fuelGrade);
 }
 
 class LogEntriesCompanion extends UpdateCompanion<LogRow> {
@@ -1100,6 +1140,7 @@ class LogEntriesCompanion extends UpdateCompanion<LogRow> {
   final Value<bool> isFull;
   final Value<bool> isAnchor;
   final Value<String> note;
+  final Value<String?> fuelGrade;
   const LogEntriesCompanion({
     this.id = const Value.absent(),
     this.position = const Value.absent(),
@@ -1112,6 +1153,7 @@ class LogEntriesCompanion extends UpdateCompanion<LogRow> {
     this.isFull = const Value.absent(),
     this.isAnchor = const Value.absent(),
     this.note = const Value.absent(),
+    this.fuelGrade = const Value.absent(),
   });
   LogEntriesCompanion.insert({
     this.id = const Value.absent(),
@@ -1125,6 +1167,7 @@ class LogEntriesCompanion extends UpdateCompanion<LogRow> {
     this.isFull = const Value.absent(),
     this.isAnchor = const Value.absent(),
     this.note = const Value.absent(),
+    this.fuelGrade = const Value.absent(),
   }) : position = Value(position),
        kind = Value(kind),
        date = Value(date);
@@ -1140,6 +1183,7 @@ class LogEntriesCompanion extends UpdateCompanion<LogRow> {
     Expression<bool>? isFull,
     Expression<bool>? isAnchor,
     Expression<String>? note,
+    Expression<String>? fuelGrade,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1153,6 +1197,7 @@ class LogEntriesCompanion extends UpdateCompanion<LogRow> {
       if (isFull != null) 'is_full': isFull,
       if (isAnchor != null) 'is_anchor': isAnchor,
       if (note != null) 'note': note,
+      if (fuelGrade != null) 'fuel_grade': fuelGrade,
     });
   }
 
@@ -1168,6 +1213,7 @@ class LogEntriesCompanion extends UpdateCompanion<LogRow> {
     Value<bool>? isFull,
     Value<bool>? isAnchor,
     Value<String>? note,
+    Value<String?>? fuelGrade,
   }) {
     return LogEntriesCompanion(
       id: id ?? this.id,
@@ -1181,6 +1227,7 @@ class LogEntriesCompanion extends UpdateCompanion<LogRow> {
       isFull: isFull ?? this.isFull,
       isAnchor: isAnchor ?? this.isAnchor,
       note: note ?? this.note,
+      fuelGrade: fuelGrade ?? this.fuelGrade,
     );
   }
 
@@ -1220,6 +1267,9 @@ class LogEntriesCompanion extends UpdateCompanion<LogRow> {
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
+    if (fuelGrade.present) {
+      map['fuel_grade'] = Variable<String>(fuelGrade.value);
+    }
     return map;
   }
 
@@ -1236,7 +1286,8 @@ class LogEntriesCompanion extends UpdateCompanion<LogRow> {
           ..write('gaugeBars: $gaugeBars, ')
           ..write('isFull: $isFull, ')
           ..write('isAnchor: $isAnchor, ')
-          ..write('note: $note')
+          ..write('note: $note, ')
+          ..write('fuelGrade: $fuelGrade')
           ..write(')'))
         .toString();
   }
@@ -2042,6 +2093,7 @@ typedef $$LogEntriesTableCreateCompanionBuilder = LogEntriesCompanion Function({
   Value<bool> isFull,
   Value<bool> isAnchor,
   Value<String> note,
+  Value<String?> fuelGrade,
 });
 typedef $$LogEntriesTableUpdateCompanionBuilder = LogEntriesCompanion Function({
   Value<int> id,
@@ -2055,6 +2107,7 @@ typedef $$LogEntriesTableUpdateCompanionBuilder = LogEntriesCompanion Function({
   Value<bool> isFull,
   Value<bool> isAnchor,
   Value<String> note,
+  Value<String?> fuelGrade,
 });
 
 class $$LogEntriesTableFilterComposer
@@ -2118,6 +2171,11 @@ class $$LogEntriesTableFilterComposer
 
   ColumnFilters<String> get note => $composableBuilder(
     column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fuelGrade => $composableBuilder(
+    column: $table.fuelGrade,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2185,6 +2243,11 @@ class $$LogEntriesTableOrderingComposer
     column: $table.note,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get fuelGrade => $composableBuilder(
+    column: $table.fuelGrade,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LogEntriesTableAnnotationComposer
@@ -2230,6 +2293,9 @@ class $$LogEntriesTableAnnotationComposer
 
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get fuelGrade =>
+      $composableBuilder(column: $table.fuelGrade, builder: (column) => column);
 }
 
 class $$LogEntriesTableTableManager
@@ -2271,6 +2337,7 @@ class $$LogEntriesTableTableManager
                 Value<bool> isFull = const Value.absent(),
                 Value<bool> isAnchor = const Value.absent(),
                 Value<String> note = const Value.absent(),
+                Value<String?> fuelGrade = const Value.absent(),
               }) => LogEntriesCompanion(
                 id: id,
                 position: position,
@@ -2283,6 +2350,7 @@ class $$LogEntriesTableTableManager
                 isFull: isFull,
                 isAnchor: isAnchor,
                 note: note,
+                fuelGrade: fuelGrade,
               ),
           createCompanionCallback:
               ({
@@ -2297,6 +2365,7 @@ class $$LogEntriesTableTableManager
                 Value<bool> isFull = const Value.absent(),
                 Value<bool> isAnchor = const Value.absent(),
                 Value<String> note = const Value.absent(),
+                Value<String?> fuelGrade = const Value.absent(),
               }) => LogEntriesCompanion.insert(
                 id: id,
                 position: position,
@@ -2309,6 +2378,7 @@ class $$LogEntriesTableTableManager
                 isFull: isFull,
                 isAnchor: isAnchor,
                 note: note,
+                fuelGrade: fuelGrade,
               ),
           withReferenceMapper: (p0) => p0
               .map(

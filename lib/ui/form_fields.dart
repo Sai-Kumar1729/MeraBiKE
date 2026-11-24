@@ -1,7 +1,49 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../engine/engine.dart';
+import 'format.dart';
+
 double? parseDecimal(String text) => double.tryParse(text.trim());
+
+/// "Fuel type" chips. Null means "Not sure", which leaves the refuel out of
+/// fuel comparisons rather than guessing.
+class FuelGradeField extends StatelessWidget {
+  const FuelGradeField({
+    super.key,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final FuelGrade? value;
+  final ValueChanged<FuelGrade?> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('Fuel type', style: Theme.of(context).textTheme.titleSmall),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        children: [
+          for (final grade in FuelGrade.values)
+            ChoiceChip(
+              label: Text(gradeLabel(grade)),
+              selected: value == grade,
+              onSelected: (_) => onChanged(grade),
+            ),
+          ChoiceChip(
+            label: const Text('Not sure'),
+            selected: value == null,
+            onSelected: (_) => onChanged(null),
+          ),
+        ],
+      ),
+    ],
+  );
+}
 
 int? parseWhole(String text) => int.tryParse(text.trim());
 

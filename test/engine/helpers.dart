@@ -21,7 +21,13 @@ class LogBuilder {
   DateTime _nextDate() => _date = _date.add(const Duration(days: 1));
 
   /// An intermediate refuel: just an amount, odometer optional.
-  void fill(String id, double amount, {int? odo, int? bars}) => entries.add(
+  void fill(
+    String id,
+    double amount, {
+    int? odo,
+    int? bars,
+    FuelGrade? grade,
+  }) => entries.add(
     RefuelEntry(
       id: id,
       date: _nextDate(),
@@ -29,6 +35,7 @@ class LogBuilder {
       amount: amount,
       pricePerLitre: price,
       gaugeBars: bars,
+      grade: grade,
     ),
   );
 
@@ -38,6 +45,7 @@ class LogBuilder {
     required int odo,
     required int bars,
     required double amount,
+    FuelGrade? grade,
   }) => entries.add(
     RefuelEntry(
       id: id,
@@ -47,6 +55,7 @@ class LogBuilder {
       pricePerLitre: price,
       gaugeBars: bars,
       isAnchor: true,
+      grade: grade,
     ),
   );
 

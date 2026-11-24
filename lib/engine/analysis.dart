@@ -56,10 +56,20 @@ class LogAnalysis {
     required List<ServicePeriod> periods,
     required List<RefuelEntry> unchained,
     required List<LogIssue> issues,
+    this._odometers = const {},
   }) : chains = List.unmodifiable(chains),
        periods = List.unmodifiable(periods),
        unchained = List.unmodifiable(unchained),
        issues = List.unmodifiable(issues);
+
+  final Map<LogEntry, int> _odometers;
+
+  /// [entry]'s odometer with rollovers added back, so readings always grow.
+  /// Null if the entry has no reading.
+  int? correctedOdometer(LogEntry entry) => _odometers[entry];
+
+  /// The last odometer reading in log order, rollover-corrected.
+  int? get latestOdometer => _odometers.isEmpty ? null : _odometers.values.last;
 
   /// Every chain, in log order.
   final List<Chain> chains;
@@ -144,6 +154,7 @@ LogAnalysis analyzeLog(
     periods: periods,
     unchained: unchained,
     issues: issues,
+    odometers: odometers,
   );
 }
 

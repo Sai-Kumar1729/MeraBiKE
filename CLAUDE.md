@@ -9,7 +9,11 @@ backend, no login, no GPS, no analytics, no ads.
 - Build in phases and STOP after each phase for the owner's review.
   - Phase 1: engine + unit tests, pure Dart. (Approved.)
   - Phase 2: Drift storage, minimal Material 3 UI with dark mode, JSON
-    export/import, pre-load the owner's 5 real entries. (Built; awaiting review.)
+    export/import, pre-load the owner's 5 real entries. (Built; the owner
+    moved on to Phase 3 without objecting to the "App decisions" below.)
+  - Phase 3: the unique core from `docs/competitor-analysis.md`: trend with
+    bands, fuel-grade comparison, ₹/km and spend, auto-backup, reminders,
+    share card, "Log refuel" shortcut. (Built; awaiting review.)
 - NEVER run `git commit` or `git push`. The owner commits and pushes
   themselves. Read-only git commands are fine.
 - Ask before adding any package. Approved so far: `drift`, `drift_dev`,
@@ -94,25 +98,65 @@ backend, no login, no GPS, no analytics, no ads.
   + litres counted since − distance ÷ km/L, at the current estimate (or the
   middle of the fence before there is one), as of the latest odometer reading.
 - Export/import: JSON via Android's own Save as / Open dialogs (Kotlin
-  MethodChannel `merabike/files` in MainActivity.kt). Import replaces all data
-  after confirmation and keeps entry ids so decisions still apply.
+  MethodChannel `merabike/android` in MainActivity.kt). Import replaces all
+  data after confirmation and keeps entry ids so decisions still apply.
 - First launch seeds the Hero Glamour from bikes.json and the owner's five
   entries, with placeholder dates (note on each entry) until the owner sends
   real dates from UPI history.
+
+## Phase 3 decisions (pending the owner's review)
+
+- Fuel grade per refuel: Regular / Premium / E10-ethanol-free, or "Not sure"
+  (null, never guessed). New refuels default to the last grade used.
+  Comparisons use only accepted chains since the last service whose counted
+  fills are all one grade; mixed and untagged chains are counted as left out.
+  A difference is claimed only when the ranges don't overlap.
+- ₹/km = last price paid ÷ the current km/L band: shown as a range. Spend
+  counts every refuel (chained or not): last 30 days inclusive and per month.
+- Trend: every chain with a result, its band as a bar, the current range as a
+  wash, services as dividers. Charts follow the dataviz skill: reference
+  palette (series blue #2a78d6 / #3987e5), flagged = status "serious"
+  #ec835a drawn hollow and labelled, discarded = grey, validated against the
+  card surfaces #eff5f2 / #171d1b; every chart has a values list.
+- Reminders are shown in the app only (no notifications package). Service:
+  every N km (rollover-corrected) and/or N days from the last logged service;
+  due soon within 300 km / 7 days. Insurance and PUC: due soon within 15
+  days.
+- Auto-backup: the owner picks a folder once (Android folder picker,
+  persisted permission). After every change the app writes
+  `merabike-auto-YYYY-MM-DD.json` (same-day saves replace it) and keeps the
+  newest 7; other files are never touched. Failures are recorded and shown on
+  Home; the change itself is already saved. The folder settings are
+  device-only: never exported, and kept when importing.
+- Share card: rendered to PNG and shared through the Android share sheet
+  via `androidx.core`'s FileProvider, which the Flutter embedding already
+  brings: no new dependency. It shares the range, litres and ₹/km only.
+- "Log refuel" static app shortcut (Android 7.1+), handled on launch and
+  while running.
+- Database schema 2 adds `log_entries.fuel_grade`; the 1→2 migration is tested
+  on a real schema-1 database.
 
 ## Layout
 
 - `lib/engine/`: models (inputs), chain (outputs), analysis (`analyzeLog`,
   rollover, warnings), estimate, logging_rules (anchor default, missed-refuel
-  placement, km left), bike_catalog
+  placement, km left), insights (₹/km, spend, grade comparison, trend),
+  reminders, bike_catalog
 - `lib/data/`: Drift database (`database.dart` + generated `.g.dart`),
-  repository, JSON backup codec, seed, file channel
+  repository, JSON backup codec, auto-backup naming, seed, `android_bridge.dart`
 - `lib/app/app_state.dart`: `AppState` (ChangeNotifier) + `AppScope`
-- `lib/ui/`: screens (home, refuel form, missed refuel, history, service form,
-  bike setup + backup, onboarding) and shared form fields
-- `android/.../MainActivity.kt`: Save as / Open bridge
+  (`of` rebuilds, `read` for callbacks)
+- `lib/ui/`: screens (home, refuel form, missed refuel, history, insights,
+  service form, bike setup + reminders + backup, onboarding), charts, share
+  card, shared form fields
+- `android/.../MainActivity.kt`: channel `merabike/android`: Save as / Open,
+  backup folder, share sheet, shortcut. `res/xml/shortcuts.xml`,
+  `res/xml/file_paths.xml`
+- `test/support/fake_bridge.dart`, `test/ui/harness.dart`: test doubles
 - `assets/bikes.json`: UNVERIFIED placeholder specs and km/L fences
 - `test/engine/`, `test/data/`, `test/ui/`
+- `docs/competitor-analysis.md`: competitor research (Nov 2026) with a
+  prioritised feature list. Read it before proposing new features.
 
 ## Commands
 

@@ -29,7 +29,9 @@ class _RefuelFormScreenState extends State<RefuelFormScreen> {
   int? _bars;
   bool _full = false;
   bool _anchor = false;
+  FuelGrade? _grade;
   bool _saving = false;
+  bool _prefilled = false;
   int? _prefilledOdometer;
 
   bool get _editing => widget.editing != null;
@@ -51,6 +53,7 @@ class _RefuelFormScreenState extends State<RefuelFormScreen> {
       _bars = entry.gaugeBars;
       _full = entry.isFull;
       _anchor = entry.isAnchor;
+      _grade = entry.grade;
     } else {
       _date = DateTime.now();
     }
@@ -59,12 +62,15 @@ class _RefuelFormScreenState extends State<RefuelFormScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_editing || _prefilledOdometer != null) return;
-    final state = AppScope.of(context);
+    // Once only: later app-state changes must not overwrite what's typed.
+    if (_editing || _prefilled) return;
+    _prefilled = true;
+    final state = AppScope.read(context);
     _prefilledOdometer = state.lastOdometer;
     _odometer.text = _prefilledOdometer?.toString() ?? '';
     final price = state.lastPricePerLitre;
     if (price != null && _price.text.isEmpty) _price.text = _plain(price);
+    _grade = state.lastFuelGrade;
   }
 
   @override
@@ -156,6 +162,11 @@ class _RefuelFormScreenState extends State<RefuelFormScreen> {
             ),
             const SizedBox(height: 16),
             PriceField(controller: _price, onChanged: () => setState(() {})),
+            const SizedBox(height: 16),
+            FuelGradeField(
+              value: _grade,
+              onChanged: (grade) => setState(() => _grade = grade),
+            ),
             const SizedBox(height: 16),
             Text(
               'Gauge before filling',
@@ -281,6 +292,7 @@ class _RefuelFormScreenState extends State<RefuelFormScreen> {
         gaugeBars: _full ? null : _bars,
         isFull: _full,
         isAnchor: _anchor,
+        grade: _grade,
         note: widget.editing?.note ?? '',
       );
     } on ArgumentError catch (e) {

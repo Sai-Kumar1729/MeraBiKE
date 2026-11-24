@@ -41,6 +41,9 @@ class LogEntries extends Table {
   BoolColumn get isFull => boolean().withDefault(const Constant(false))();
   BoolColumn get isAnchor => boolean().withDefault(const Constant(false))();
   TextColumn get note => text().withDefault(const Constant(''))();
+
+  /// A `FuelGrade` name, or null when not recorded. Added in schema 2.
+  TextColumn get fuelGrade => text().nullable()();
 }
 
 /// The user's accept/discard answer for the chain between two anchors.
@@ -79,6 +82,14 @@ class AppDatabase extends _$AppDatabase {
     }),
   );
 
+  /// 1: Phase 2. 2: fuel grade on log entries.
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      if (from < 2) await m.addColumn(logEntries, logEntries.fuelGrade);
+    },
+  );
 }

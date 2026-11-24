@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="log_refuel"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_log_refuel"
+        android:shortcutLongLabel="@string/shortcut_log_refuel">
+        <intent
+            android:action="com.merabike.mera_bike.LOG_REFUEL"
+            android:targetPackage="com.merabike.mera_bike"
+            android:targetClass="com.merabike.mera_bike.MainActivity" />
+    </shortcut>
+</shortcuts>

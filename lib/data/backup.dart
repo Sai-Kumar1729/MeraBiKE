@@ -129,6 +129,7 @@ Map<String, Object?> _entryToJson(LogEntry entry) => switch (entry) {
     'gaugeBars': entry.gaugeBars,
     'isFull': entry.isFull,
     'isAnchor': entry.isAnchor,
+    'grade': entry.grade?.name,
     'note': entry.note,
   },
   ServiceEvent() => {
@@ -154,6 +155,7 @@ LogEntry _entryFromJson(Map<String, Object?> json) {
       gaugeBars: _opt<int>(json, 'gaugeBars'),
       isFull: _get<bool>(json, 'isFull'),
       isAnchor: _get<bool>(json, 'isAnchor'),
+      grade: _gradeFromJson(_opt<String>(json, 'grade')),
       note: _opt<String>(json, 'note') ?? '',
     ),
     'service' => ServiceEvent(
@@ -164,6 +166,14 @@ LogEntry _entryFromJson(Map<String, Object?> json) {
     ),
     final kind => throw FormatException('entry $id has unknown kind "$kind"'),
   };
+}
+
+/// Optional since Phase 3; an unknown name reads as "not recorded".
+FuelGrade? _gradeFromJson(String? name) {
+  for (final grade in FuelGrade.values) {
+    if (grade.name == name) return grade;
+  }
+  return null;
 }
 
 T _get<T>(Map<String, Object?> json, String key) {

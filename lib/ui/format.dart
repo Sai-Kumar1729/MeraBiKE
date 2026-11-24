@@ -69,3 +69,78 @@ String chainLabel(BuildContext context, Chain chain) {
       : '${date(context, chain.start.date)} → ${date(context, endEntry.date)}';
   return '$span · ${chain.level} · ${statusLabel(chain)}';
 }
+
+String gradeLabel(FuelGrade grade) => switch (grade) {
+  FuelGrade.regular => 'Regular',
+  FuelGrade.premium => 'Premium',
+  FuelGrade.lowEthanol => 'E10 / ethanol-free',
+};
+
+/// "₹3.29–3.93", or "up to ₹3.93" when the band has no top.
+String costRange(CostPerKm cost) {
+  final low = cost.low;
+  final high = cost.high.toStringAsFixed(2);
+  return low == null ? 'up to ₹$high' : '₹${low.toStringAsFixed(2)}–$high';
+}
+
+/// "₹3.29–3.93 per km".
+String costPerKmText(CostPerKm cost) => '${costRange(cost)} per km';
+
+const _months = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+/// "Nov 2026".
+String monthLabel(int year, int month) => '${_months[month - 1]} $year';
+
+String reminderTitle(ReminderKind kind) => switch (kind) {
+  ReminderKind.service => 'Service',
+  ReminderKind.insurance => 'Insurance',
+  ReminderKind.puc => 'PUC certificate',
+};
+
+/// "Due in 200 km or 12 days (6 Dec)", "Overdue by 4 days (1 Apr)",
+/// "Expires in 10 days (4 Dec)", "Expired 1 day ago (23 Nov)".
+String reminderDetail(BuildContext context, ReminderStatus status) {
+  if (status.needsLastService) {
+    return 'Log your last service so the countdown can start';
+  }
+  final on = status.dueDate == null
+      ? ''
+      : ' (${date(context, status.dueDate!)})';
+  final kmLeft = status.kmLeft;
+  final daysLeft = status.daysLeft;
+
+  if (status.kind != ReminderKind.service) {
+    final left = daysLeft!;
+    if (left < 0) return 'Expired ${_days(-left)} ago$on';
+    if (left == 0) return 'Expires today$on';
+    return 'Expires in ${_days(left)}$on';
+  }
+  if (status.state == DueState.overdue) {
+    final by = [
+      if (kmLeft != null && kmLeft < 0) km(-kmLeft),
+      if (daysLeft != null && daysLeft < 0) _days(-daysLeft),
+    ];
+    return 'Overdue by ${by.join(' and ')}$on';
+  }
+  if (daysLeft == 0) return 'Due today$on';
+  final within = [
+    if (kmLeft != null) km(kmLeft),
+    if (daysLeft != null) _days(daysLeft),
+  ];
+  return 'Due in ${within.join(' or ')}$on';
+}
+
+String _days(int n) => n == 1 ? '1 day' : '$n days';
