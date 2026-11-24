@@ -183,7 +183,8 @@ class Chain {
   /// up to the latest odometer reading inside the chain.
   final int? distanceKm;
 
-  /// The U used for this chain's band.
+  /// The chain's U: √2 × the per-reading U, since the start and end readings
+  /// each carry their own error. Used for [band].
   final double uncertaintyLitres;
 
   /// distance ÷ litres. Set only for closed, flagged and discarded chains, as

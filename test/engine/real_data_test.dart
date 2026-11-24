@@ -72,9 +72,10 @@ void main() {
     expect([for (final r in chain.countedFills) r.id], ['r1', 'r2', 'r3']);
     expect(chain.litres, closeTo(8.03, 0.01)); // ₹932 / ₹116
     expect(chain.kmpl, closeTo(32.1, 0.05));
-    expect(chain.uncertaintyLitres, 0.5);
-    expect(chain.band!.low, closeTo(30.23, 0.01)); // 258 / (8.03 + 0.5)
-    expect(chain.band!.high, closeTo(34.24, 0.01)); // 258 / (8.03 - 0.5)
+    // Two readings at ±0.5 L each: chain U = √2 × 0.5 = 0.71 L.
+    expect(chain.uncertaintyLitres, closeTo(0.707, 0.001));
+    expect(chain.band!.low, closeTo(29.51, 0.01)); // 258 / (8.03 + 0.71)
+    expect(chain.band!.high, closeTo(35.21, 0.01)); // 258 / (8.03 - 0.71)
     expect(chain.confidence, Confidence.high);
     expect(chain.plausibility, Plausibility.inRange);
   });
@@ -98,8 +99,8 @@ void main() {
     final current = analysis.current!;
     expect(current.chains, hasLength(1));
     expect(current.kmpl, closeTo(32.1, 0.05));
-    expect(current.band.low, closeTo(30.23, 0.01));
-    expect(current.band.high, closeTo(34.24, 0.01));
+    expect(current.band.low, closeTo(29.51, 0.01));
+    expect(current.band.high, closeTo(35.21, 0.01));
     expect(current.confidence, Confidence.high);
     expect(analysis.issues, isEmpty);
     expect(analysis.unchained, isEmpty);

@@ -39,6 +39,7 @@ class BikeModel {
     double? tankLitres,
     int? gaugeBars,
     double? prefillUncertaintyLitres,
+    int? odometerDigits,
   }) => Bike(
     model: model,
     tankLitres: tankLitres ?? this.tankLitres,
@@ -47,6 +48,7 @@ class BikeModel {
     expectedKmplMax: expectedKmplMax,
     prefillUncertaintyLitres:
         prefillUncertaintyLitres ?? Bike.defaultPrefillUncertaintyLitres,
+    odometerDigits: odometerDigits ?? Bike.defaultOdometerDigits,
   );
 }
 

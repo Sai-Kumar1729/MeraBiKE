@@ -21,7 +21,8 @@ class OverallEstimate {
   final double litres;
 
   /// Combined U. Back-to-back chains share their middle anchors, so those
-  /// errors cancel: each unbroken run of chains adds one U, and independent
+  /// errors cancel: each unbroken run of chains has only its first and last
+  /// readings left, worth one chain U (√2 × the per-reading U). Independent
   /// runs combine as √ΣU².
   final double uncertaintyLitres;
 

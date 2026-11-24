@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mera_bike/engine/engine.dart';
 
@@ -18,9 +20,10 @@ void main() {
       expect(chain.litres, closeTo(6, 1e-9));
       expect(chain.distanceKm, 300);
       expect(chain.kmpl, closeTo(50, 1e-9));
-      expect(chain.uncertaintyLitres, 0.15);
-      expect(chain.band!.low, closeTo(300 / 6.15, 1e-9));
-      expect(chain.band!.high, closeTo(300 / 5.85, 1e-9));
+      const u = math.sqrt2 * 0.15; // two FULL readings at ±0.15 L each
+      expect(chain.uncertaintyLitres, closeTo(u, 1e-9));
+      expect(chain.band!.low, closeTo(300 / (6 + u), 1e-9));
+      expect(chain.band!.high, closeTo(300 / (6 - u), 1e-9));
       expect(chain.confidence, Confidence.medium);
     });
 

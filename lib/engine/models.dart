@@ -13,7 +13,12 @@ class Bike {
     required this.expectedKmplMax,
     this.prefillUncertaintyLitres = defaultPrefillUncertaintyLitres,
     this.fullUncertaintyLitres = defaultFullUncertaintyLitres,
+    this.odometerDigits = defaultOdometerDigits,
   }) {
+    _require(
+      odometerDigits >= 4 && odometerDigits <= 7,
+      'odometerDigits must be 4 to 7',
+    );
     _require(tankLitres.isFinite && tankLitres > 0, 'tankLitres must be > 0');
     _require(gaugeBars > 0, 'gaugeBars must be > 0');
     _require(
@@ -33,11 +38,14 @@ class Bike {
     );
   }
 
-  /// Default U for gauge-bar (pre-fill) anchors, in litres.
+  /// Default U per gauge-bar (pre-fill) reading, in litres.
   static const double defaultPrefillUncertaintyLitres = 0.5;
 
-  /// Default U for FULL (filled to the neck) anchors, in litres.
+  /// Default U per FULL (filled to the neck) reading, in litres.
   static const double defaultFullUncertaintyLitres = 0.15;
+
+  /// Until the owner checks the bike: a 5-digit odometer rolls over at 99,999.
+  static const int defaultOdometerDigits = 5;
 
   final String model;
 
@@ -51,11 +59,28 @@ class Bike {
   final double expectedKmplMin;
   final double expectedKmplMax;
 
-  /// U for gauge-bar anchors: how fuzzy the anchor level is, ± litres.
+  /// U for one gauge-bar reading: how fuzzy the anchor level is, ± litres.
+  /// A chain has two readings, so its band uses √2 × U.
   final double prefillUncertaintyLitres;
 
-  /// U for FULL anchors, ± litres.
+  /// U for one FULL reading, ± litres.
   final double fullUncertaintyLitres;
+
+  /// Digits on the odometer. A drop of more than 90% of the maximum reading
+  /// is a rollover, not an error.
+  final int odometerDigits;
+
+  /// The reading after the maximum: 100000 for 5 digits.
+  int get odometerModulus {
+    var modulus = 1;
+    for (var i = 0; i < odometerDigits; i++) {
+      modulus *= 10;
+    }
+    return modulus;
+  }
+
+  /// The highest reading the odometer can show: 99999 for 5 digits.
+  int get odometerMax => odometerModulus - 1;
 }
 
 /// One item in the bike's log. The engine reads the log in list order.
@@ -85,6 +110,7 @@ final class RefuelEntry extends LogEntry {
     this.gaugeBars,
     this.isFull = false,
     this.isAnchor = false,
+    this.note = '',
   }) {
     final odo = odometer;
     final bars = gaugeBars;
@@ -122,6 +148,9 @@ final class RefuelEntry extends LogEntry {
 
   /// This refuel is a chain anchor.
   final bool isAnchor;
+
+  /// Free text for the owner. The engine ignores it.
+  final String note;
 
   /// Litres added: amount ÷ price per litre.
   double get litres => amount / pricePerLitre;

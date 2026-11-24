@@ -2,14 +2,19 @@
 /// data warnings. A pure function of its inputs.
 library;
 
+import 'dart:math' as math;
+
 import 'chain.dart';
 import 'estimate.dart';
 import 'models.dart';
 
-/// Something in the log that looks like a typing or ordering mistake. These
-/// are warnings: the analysis still runs.
+/// Something in the log worth a look. The analysis still runs.
 enum IssueKind {
   odometerWentBackwards,
+
+  /// Not an error: the odometer passed its maximum and started again at 0.
+  odometerRolledOver,
+  odometerAboveMax,
   dateWentBackwards,
   gaugeAboveBikeBars,
   fillExceedsTank,
@@ -85,6 +90,10 @@ LogAnalysis analyzeLog(
   Bike bike, {
   List<ChainDecision> decisions = const [],
 }) {
+  final issues = <LogIssue>[];
+  final odometers = _trackOdometer(log, bike, issues);
+  _checkEntries(log, bike, issues);
+
   final chains = <Chain>[];
   final periods = <ServicePeriod>[];
   final unchained = <RefuelEntry>[];
@@ -101,7 +110,7 @@ LogAnalysis analyzeLog(
     switch (entry) {
       case final ServiceEvent service:
         if (draft != null) {
-          emit(draft.broken(bike, BreakReason.service, service));
+          emit(draft.broken(BreakReason.service, service));
           draft = null;
         }
         periods.add(
@@ -120,51 +129,54 @@ LogAnalysis analyzeLog(
         if (draft != null) {
           emit(
             draft.level == level
-                ? draft.close(anchor, bike, decisions)
-                : draft.broken(bike, BreakReason.levelChanged, anchor),
+                ? draft.close(anchor, decisions)
+                : draft.broken(BreakReason.levelChanged, anchor),
           );
         }
-        draft = _Draft(anchor, level);
+        draft = _Draft(anchor, level, bike, odometers);
     }
   }
-  if (draft != null) emit(draft.open(bike));
+  if (draft != null) emit(draft.open());
   periods.add(ServicePeriod(startedBy: periodStart, chains: periodChains));
 
   return LogAnalysis(
     chains: chains,
     periods: periods,
     unchained: unchained,
-    issues: _findIssues(log, bike),
+    issues: issues,
   );
 }
 
 /// A chain being walked: its start anchor plus every refuel since.
 class _Draft {
-  _Draft(this.start, this.level) : refuels = [start];
+  _Draft(this.start, this.level, this.bike, this.odometers) : refuels = [start];
 
   final RefuelEntry start;
   final AnchorLevel level;
+  final Bike bike;
+
+  /// Rollover-corrected odometer of every entry that has a reading.
+  final Map<LogEntry, int> odometers;
   final List<RefuelEntry> refuels;
 
   bool get _isFull => level.kind == AnchorKind.full;
 
-  double _uncertainty(Bike bike) =>
-      _isFull ? bike.fullUncertaintyLitres : bike.prefillUncertaintyLitres;
+  /// Two readings per chain (start and end), each ± the per-reading U.
+  double get _uncertainty =>
+      math.sqrt2 *
+      (_isFull ? bike.fullUncertaintyLitres : bike.prefillUncertaintyLitres);
 
-  Chain open(Bike bike) => _unfinished(bike, ChainStatus.open, null, null);
+  int _distanceTo(RefuelEntry entry) => odometers[entry]! - odometers[start]!;
 
-  Chain broken(Bike bike, BreakReason reason, LogEntry by) =>
-      _unfinished(bike, ChainStatus.broken, reason, by);
+  Chain open() => _unfinished(ChainStatus.open, null, null);
+
+  Chain broken(BreakReason reason, LogEntry by) =>
+      _unfinished(ChainStatus.broken, reason, by);
 
   /// An open chain, or one broken before reaching a same-level anchor.
-  Chain _unfinished(
-    Bike bike,
-    ChainStatus status,
-    BreakReason? reason,
-    LogEntry? by,
-  ) {
+  Chain _unfinished(ChainStatus status, BreakReason? reason, LogEntry? by) {
     final counted = _isFull ? refuels.sublist(1) : refuels;
-    final lastOdometer = refuels.lastWhere((r) => r.odometer != null).odometer!;
+    final lastRead = refuels.lastWhere((r) => r.odometer != null);
     return Chain(
       status: status,
       level: level,
@@ -173,22 +185,22 @@ class _Draft {
       refuels: refuels,
       countedFills: counted,
       litres: _sumLitres(counted),
-      distanceKm: lastOdometer - start.odometer!,
-      uncertaintyLitres: _uncertainty(bike),
+      distanceKm: _distanceTo(lastRead),
+      uncertaintyLitres: _uncertainty,
       breakReason: reason,
       brokenBy: by,
     );
   }
 
-  Chain close(RefuelEntry end, Bike bike, List<ChainDecision> decisions) {
+  Chain close(RefuelEntry end, List<ChainDecision> decisions) {
     final all = [...refuels, end];
     // PRE-FILL: the start fill is counted; the end fill starts the next chain.
     // FULL: the start fill only topped up to the anchor level; the end fill
     // is counted.
     final counted = _isFull ? all.sublist(1) : refuels;
     final litres = _sumLitres(counted);
-    final distance = end.odometer! - start.odometer!;
-    final u = _uncertainty(bike);
+    final distance = _distanceTo(end);
+    final u = _uncertainty;
 
     Chain withoutResult(BreakReason reason) => Chain(
       status: ChainStatus.broken,
@@ -256,26 +268,63 @@ ChainDecisionKind? _decisionFor(
   return null;
 }
 
-List<LogIssue> _findIssues(List<LogEntry> log, Bike bike) {
-  final issues = <LogIssue>[];
-  int? lastOdometer;
-  DateTime? lastDate;
+/// Rollover-corrected odometers, keyed by entry. A drop of more than 90% of
+/// the odometer's maximum is a rollover; any other drop is reported.
+Map<LogEntry, int> _trackOdometer(
+  List<LogEntry> log,
+  Bike bike,
+  List<LogIssue> issues,
+) {
+  final corrected = Map<LogEntry, int>.identity();
+  var offset = 0;
+  int? lastReading;
   for (final entry in log) {
-    final odometer = entry.odometer;
-    if (odometer != null) {
-      if (lastOdometer != null && odometer < lastOdometer) {
+    final reading = entry.odometer;
+    if (reading == null) continue;
+    if (reading > bike.odometerMax) {
+      issues.add(
+        LogIssue(
+          kind: IssueKind.odometerAboveMax,
+          entryId: entry.id,
+          message:
+              '$reading km has more digits than the ${bike.odometerDigits}-digit '
+              'odometer in Bike setup. Check the reading or the setting.',
+        ),
+      );
+    }
+    if (lastReading != null && reading < lastReading) {
+      if (lastReading - reading > 0.9 * bike.odometerMax) {
+        offset += bike.odometerModulus;
+        issues.add(
+          LogIssue(
+            kind: IssueKind.odometerRolledOver,
+            entryId: entry.id,
+            message:
+                'Odometer rolled over ($lastReading → $reading km); counted '
+                'as ${reading + offset} km. If that is a typo, fix the reading.',
+          ),
+        );
+      } else {
         issues.add(
           LogIssue(
             kind: IssueKind.odometerWentBackwards,
             entryId: entry.id,
             message:
-                'Odometer $odometer km is below the previous reading of '
-                '$lastOdometer km. Check the reading or the entry order.',
+                'Odometer $reading km is below the previous reading of '
+                '$lastReading km. Check the reading or the entry order.',
           ),
         );
       }
-      lastOdometer = odometer;
     }
+    lastReading = reading;
+    corrected[entry] = reading + offset;
+  }
+  return corrected;
+}
+
+void _checkEntries(List<LogEntry> log, Bike bike, List<LogIssue> issues) {
+  DateTime? lastDate;
+  for (final entry in log) {
     if (lastDate != null && entry.date.isBefore(lastDate)) {
       issues.add(
         LogIssue(
@@ -310,5 +359,4 @@ List<LogIssue> _findIssues(List<LogEntry> log, Bike bike) {
       }
     }
   }
-  return issues;
 }

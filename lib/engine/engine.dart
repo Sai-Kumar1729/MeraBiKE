@@ -5,4 +5,5 @@ export 'analysis.dart';
 export 'bike_catalog.dart';
 export 'chain.dart';
 export 'estimate.dart';
+export 'logging_rules.dart';
 export 'models.dart';

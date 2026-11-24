@@ -34,11 +34,13 @@ void main() {
       expect(current.confidence, Confidence.high);
     });
 
-    test('back-to-back chains share anchors, so the band uses one U', () {
+    test('back-to-back chains share anchors: only the two outer readings '
+        'count', () {
       final current = analyzeLog(threeChains().entries, testBike).current!;
-      expect(current.uncertaintyLitres, closeTo(0.5, 1e-9));
-      expect(current.band.low, closeTo(780 / 16.5, 1e-9));
-      expect(current.band.high, closeTo(780 / 15.5, 1e-9));
+      const u = math.sqrt2 * 0.5;
+      expect(current.uncertaintyLitres, closeTo(u, 1e-9));
+      expect(current.band.low, closeTo(780 / (16 + u), 1e-9));
+      expect(current.band.high, closeTo(780 / (16 - u), 1e-9));
     });
 
     test('a gap between accepted chains adds a second U, in quadrature', () {
@@ -55,7 +57,8 @@ void main() {
       ).current!;
       expect(current.chains.map((c) => c.id), ['a1', 'a3']);
       expect(current.kmpl, closeTo(45, 1e-9));
-      expect(current.uncertaintyLitres, closeTo(math.sqrt(0.5), 1e-9));
+      // Two independent runs, each √2 × 0.5: √(0.5 + 0.5) = 1 L.
+      expect(current.uncertaintyLitres, closeTo(1, 1e-9));
     });
   });
 
