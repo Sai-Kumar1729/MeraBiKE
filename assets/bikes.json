@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "notice": "UNVERIFIED PLACEHOLDERS. Every number below is a rough guess to be checked against the owner's manual and real-world data. tankLitres = listed tank capacity. gaugeBars = bars on a digital gauge; for a needle gauge, its marked divisions. expectedKmplMin/Max = a wide plausibility fence for catching logging mistakes, not a mileage claim. Set \"verified\": true once a model has been checked.",
+  "models": [
+    { "model": "Hero Splendor Plus", "tankLitres": 9.8, "gaugeBars": 4, "expectedKmplMin": 50, "expectedKmplMax": 80, "verified": false },
+    { "model": "Hero HF Deluxe", "tankLitres": 9.6, "gaugeBars": 4, "expectedKmplMin": 50, "expectedKmplMax": 80, "verified": false },
+    { "model": "Hero Glamour", "tankLitres": 10.0, "gaugeBars": 5, "expectedKmplMin": 40, "expectedKmplMax": 65, "verified": false },
+    { "model": "Honda Shine 125", "tankLitres": 10.5, "gaugeBars": 4, "expectedKmplMin": 45, "expectedKmplMax": 70, "verified": false },
+    { "model": "Honda SP 125", "tankLitres": 11.2, "gaugeBars": 6, "expectedKmplMin": 45, "expectedKmplMax": 70, "verified": false },
+    { "model": "Bajaj Platina 100", "tankLitres": 11.0, "gaugeBars": 4, "expectedKmplMin": 55, "expectedKmplMax": 85, "verified": false },
+    { "model": "TVS Star City Plus", "tankLitres": 10.0, "gaugeBars": 4, "expectedKmplMin": 50, "expectedKmplMax": 80, "verified": false },
+    { "model": "TVS Radeon", "tankLitres": 10.0, "gaugeBars": 4, "expectedKmplMin": 50, "expectedKmplMax": 75, "verified": false }
+  ]
+}
